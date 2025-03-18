@@ -16,11 +16,11 @@ namespace LibraryApp.JwtFeatures
             _configuration = configuration;
             _jwtSettings = _configuration.GetRequiredSection("JwtSettings");
         }
-        public string CreateToken(User user)
+        public string CreateToken(User user, IList<string> roles)
         {
 
             var signingCredentials = GetSigningCredentials();
-            var claims = GetClaims(user);
+            var claims = GetClaims(user, roles);
             var tokenOptions = GenerateTokenOptions(signingCredentials, claims);
 
             return new JwtSecurityTokenHandler().WriteToken(tokenOptions);
@@ -34,12 +34,18 @@ namespace LibraryApp.JwtFeatures
             return new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         }
 
-        private List<Claim> GetClaims(User user)
+        private List<Claim> GetClaims(User user, IList<string> roles)
         {
             var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()!),
                 new Claim(ClaimTypes.Name, user.UserName)
             };
+
+            foreach(var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
 
             return claims;
         }

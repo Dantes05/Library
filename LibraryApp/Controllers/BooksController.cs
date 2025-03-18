@@ -1,7 +1,9 @@
 ﻿using Application.Interfaces;
 using Domain.Entities;
+using LibraryApp.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LibraryApp.Controllers
 {
@@ -10,11 +12,13 @@ namespace LibraryApp.Controllers
     [ApiController]
     public class BooksController : ControllerBase
     {
+        private readonly IBookRentalRepository _bookRentalRepository;
         private readonly IBookRepository _bookRepository;
         private readonly IAuthorRepository _authorRepository; // Добавили репозиторий авторов
 
-        public BooksController(IBookRepository bookRepository, IAuthorRepository authorRepository)
+        public BooksController(IBookRentalRepository bookRentalRepository, IBookRepository bookRepository, IAuthorRepository authorRepository)
         {
+            _bookRentalRepository = bookRentalRepository;
             _bookRepository = bookRepository;
             _authorRepository = authorRepository; // Инициализируем _authorRepository
         }
@@ -34,7 +38,7 @@ namespace LibraryApp.Controllers
             return Ok(book);
         }
 
-        
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> CreateBook([FromBody] Book book)
         {
@@ -77,5 +81,46 @@ namespace LibraryApp.Controllers
             await _bookRepository.DeleteAsync(book);
             return NoContent();
         }
+
+        [Authorize]
+        [HttpPost("borrow")]
+        public async Task<IActionResult> BorrowBook([FromBody] BookBorrowRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var book = await _bookRepository.GetByIdAsync(request.BookId);
+            if (book == null)
+                return NotFound("Book not found.");
+
+            var activeRental = await _bookRentalRepository.GetActiveRental(request.BookId, userId);
+            if (activeRental != null)
+                return BadRequest("You have already borrowed this book.");
+
+            var rental = new BookRental
+            {
+                BookId = request.BookId,
+                UserId = userId
+            };
+
+            await _bookRentalRepository.AddRental(rental);
+
+            return Ok("Book successfully borrowed.");
+        }
+
+        [Authorize]
+        [HttpPost("return")]
+        public async Task<IActionResult> ReturnBook([FromBody] BookReturnRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            var rental = await _bookRentalRepository.GetActiveRental(request.BookId, userId);
+            if (rental == null)
+                return BadRequest("You haven't borrowed this book.");
+
+            await _bookRentalRepository.CompleteRental(rental);
+
+            return Ok("Book successfully returned.");
+        }
+
     }
 }

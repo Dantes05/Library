@@ -18,11 +18,11 @@ builder.Services.AddAutoMapper(typeof(Program));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<User, IdentityRole<int>>()
+builder.Services.AddIdentity<User, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddScoped<RoleManager<IdentityRole<int>>>();
+builder.Services.AddScoped<RoleManager<IdentityRole>>();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
@@ -52,6 +52,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var jwtSettings = builder.Configuration.GetSection("JWTSettings");
+
 builder.Services.AddAuthentication(opt =>
 {
     opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -70,12 +71,20 @@ builder.Services.AddAuthentication(opt =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.GetSection("securityKey").Value))
     };
 });
+
+builder.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("OnlyAdminUsers", policy => policy.RequireRole("Admin"));
+    }
+);
+
 builder.Services.AddSingleton<JwtHandler>();
 
 builder.Services.AddControllers();
 
 builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
 builder.Services.AddScoped<IBookRepository, BookRepository>();
+builder.Services.AddScoped<IBookRentalRepository, BookRentalRepository>();
 
 
 var app = builder.Build();

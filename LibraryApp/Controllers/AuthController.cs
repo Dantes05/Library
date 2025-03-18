@@ -5,6 +5,7 @@ using LibraryApp.DTOs;
 using LibraryApp.JwtFeatures;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
@@ -47,6 +48,9 @@ public class AuthController : ControllerBase
 
             return BadRequest(new RegistrationResponseDto { Errors = errors });
         }
+
+        await _userManager.AddToRoleAsync(user, "User");
+
         return StatusCode(201);
     }
 
@@ -57,9 +61,68 @@ public class AuthController : ControllerBase
         if (user is null || !await _userManager.CheckPasswordAsync(user, userForAuthentication.Password!))
             return Unauthorized(new AuthResponseDto { ErrorMessage = "Invalid Authentication" });
 
-        var token = _jwtHandler.CreateToken(user);
+        var roles = await _userManager.GetRolesAsync(user);
+        var accessToken = _jwtHandler.CreateToken(user, roles);
+        var refreshToken = GenerateRefreshToken();
 
-        return Ok(new AuthResponseDto { IsAuthSuccessful = true, Token = token });
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new AuthResponseDto
+        {
+            IsAuthSuccessful = true,
+            Token = accessToken,
+            RefreshToken = refreshToken
+        });
+    }
+    private string GenerateRefreshToken()
+    {
+        var randomNumber = new byte[32];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(randomNumber);
+            return Convert.ToBase64String(randomNumber);
+        }
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    {
+        var user = await _userManager.Users.FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken);
+
+        if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            return Unauthorized(new AuthResponseDto { ErrorMessage = "Invalid or expired refresh token." });
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var newAccessToken = _jwtHandler.CreateToken(user, roles);
+        var newRefreshToken = GenerateRefreshToken();
+
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+
+        await _userManager.UpdateAsync(user);
+
+        return Ok(new AuthResponseDto
+        {
+            IsAuthSuccessful = true,
+            Token = newAccessToken,
+            RefreshToken = newRefreshToken
+        });
+    }
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+            return Unauthorized();
+
+        user.RefreshToken = null;
+        user.RefreshTokenExpiryTime = null;
+
+        await _userManager.UpdateAsync(user);
+        return Ok("Logged out successfully.");
     }
 
 

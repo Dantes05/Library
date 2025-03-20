@@ -18,5 +18,7 @@ namespace Domain.Entities
 
         public DateTime? TakenAt { get; set; }
         public DateTime? ReturnAt { get; set; }
+
+
     }
 }

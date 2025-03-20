@@ -18,5 +18,9 @@ namespace Infrastructure.Repositories
         {
             return await _context.Authors.Where(a => a.Country == country).ToListAsync();
         }
+        public async Task<Author?> GetByNameAsync(string name)
+        {
+            return await _context.Authors.FirstOrDefaultAsync(a => a.FirstName + " " + a.LastName == name);
+        }
     }
 }

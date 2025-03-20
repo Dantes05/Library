@@ -10,5 +10,6 @@ namespace Application.Interfaces
     public interface IAuthorRepository : IRepository<Author>
     {
         Task<IEnumerable<Author>> GetAuthorsByCountryAsync(string country);
+        Task<Author?> GetByNameAsync(string name);
     }
 }

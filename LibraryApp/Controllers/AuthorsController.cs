@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryApp.Controllers
 {
-    [Authorize]
+    [AllowAnonymous]
     [Route("api/authors")]
     [ApiController]
     public class AuthorsController : ControllerBase
@@ -45,7 +45,7 @@ namespace LibraryApp.Controllers
             return Ok(books);
         }
 
-        [Authorize]
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> CreateAuthor([FromBody] Author author)
         {
@@ -53,7 +53,7 @@ namespace LibraryApp.Controllers
             return CreatedAtAction(nameof(GetAuthorById), new { id = author.Id }, author);
         }
 
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAuthor(int id, [FromBody] Author author)
         {
@@ -62,7 +62,7 @@ namespace LibraryApp.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {

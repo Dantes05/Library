@@ -17,7 +17,7 @@ namespace Infrastructure.Repositories
         public async Task<Book?> GetByISBNAsync(string isbn)
         {
             return await _context.Books
-                .FirstOrDefaultAsync(b => b.ISBN == isbn); // Убрали Include(b => b.Author)
+                .FirstOrDefaultAsync(b => b.ISBN == isbn);
         }
 
         public async Task<IEnumerable<Book>> GetBooksByAuthorIdAsync(int authorId)
@@ -25,6 +25,10 @@ namespace Infrastructure.Repositories
             return await _context.Books
                 .Where(b => b.AuthorId == authorId)
                 .ToListAsync();
+        }
+        public IQueryable<Book> GetAllQueryable()
+        {
+            return _context.Books.AsQueryable();
         }
     }
 

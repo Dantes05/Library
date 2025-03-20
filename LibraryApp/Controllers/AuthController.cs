@@ -40,6 +40,8 @@ public class AuthController : ControllerBase
         if (userForRegistration is null)
             return BadRequest();
         var user = _mapper.Map<User>(userForRegistration);
+
+
         var result = await _userManager.CreateAsync(user, userForRegistration.Password);
 
         if (!result.Succeeded)

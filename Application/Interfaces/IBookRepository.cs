@@ -11,5 +11,6 @@ namespace Application.Interfaces
     {
         Task<Book?> GetByISBNAsync(string isbn);
         Task<IEnumerable<Book>> GetBooksByAuthorIdAsync(int authorId);
+        IQueryable<Book> GetAllQueryable();
     }
 }

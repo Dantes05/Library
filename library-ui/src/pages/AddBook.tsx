@@ -16,6 +16,9 @@ const AddBook: React.FC = () => {
     birthDate: "",
     country: "",
   });
+  const [image, setImage] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [authorError, setAuthorError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -33,10 +36,16 @@ const AddBook: React.FC = () => {
   };
 
   const handleAddAuthor = async () => {
+    setAuthorError(null);
+
+    if (!newAuthor.firstName || !newAuthor.lastName || !newAuthor.birthDate || !newAuthor.country) {
+      setAuthorError("Все поля автора должны быть заполнены.");
+      return;
+    }
+
     try {
       const response = await axios.post("http://localhost:7143/api/authors", newAuthor);
       const addedAuthor = response.data;
-
 
       setAuthors([...authors, addedAuthor]);
       setAuthorId(addedAuthor.id.toString());
@@ -49,22 +58,39 @@ const AddBook: React.FC = () => {
   };
 
   const handleAddBook = async () => {
+    setError(null);
+
+    if (!isbn || !title || !genre || !description || !authorId) {
+      setError("Все поля должны быть заполнены.");
+      return;
+    }
+
     try {
-      if (!authorId) {
-        alert("Выберите или добавьте автора.");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Пользователь не авторизован.");
+        navigate("/login");
         return;
       }
 
-      await axios.post("http://localhost:7143/api/books", {
-        isbn,
-        title,
-        genre,
-        description,
-        authorId,
-        takenAt: new Date().toISOString(),
-        returnAt: new Date().toISOString(),
+      const formData = new FormData();
+      formData.append("ISBN", isbn);
+      formData.append("Title", title);
+      formData.append("Genre", genre);
+      formData.append("Description", description);
+      formData.append("AuthorId", authorId);
+      if (image) {
+        formData.append("Image", image);
+      }
+
+      const response = await axios.post("http://localhost:7143/api/books", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
       });
 
+      console.log("Книга успешно добавлена:", response.data);
       navigate("/books");
     } catch (error) {
       console.error("Ошибка при добавлении книги:", error);
@@ -75,10 +101,23 @@ const AddBook: React.FC = () => {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Добавление книги</h1>
 
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
       <input className="border p-2 mb-2 w-full" type="text" placeholder="ISBN" value={isbn} onChange={(e) => setIsbn(e.target.value)} />
       <input className="border p-2 mb-2 w-full" type="text" placeholder="Название книги" value={title} onChange={(e) => setTitle(e.target.value)} />
       <input className="border p-2 mb-2 w-full" type="text" placeholder="Жанр" value={genre} onChange={(e) => setGenre(e.target.value)} />
       <textarea className="border p-2 mb-2 w-full" placeholder="Описание" value={description} onChange={(e) => setDescription(e.target.value)} />
+
+      <input
+        className="border p-2 mb-2 w-full"
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          if (e.target.files && e.target.files[0]) {
+            setImage(e.target.files[0]);
+          }
+        }}
+      />
 
       <select className="border p-2 mb-2 w-full" value={authorId || ""} onChange={(e) => setAuthorId(e.target.value)}>
         <option value="">Выберите автора</option>
@@ -97,6 +136,7 @@ const AddBook: React.FC = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold mb-4">Добавление автора</h2>
+            {authorError && <p className="text-red-500 mb-4">{authorError}</p>}
             <input className="border p-2 mb-2 w-full" type="text" placeholder="Имя" value={newAuthor.firstName} onChange={(e) => setNewAuthor({ ...newAuthor, firstName: e.target.value })} />
             <input className="border p-2 mb-2 w-full" type="text" placeholder="Фамилия" value={newAuthor.lastName} onChange={(e) => setNewAuthor({ ...newAuthor, lastName: e.target.value })} />
             <input className="border p-2 mb-2 w-full" type="date" placeholder="Дата рождения" value={newAuthor.birthDate} onChange={(e) => setNewAuthor({ ...newAuthor, birthDate: e.target.value })} />

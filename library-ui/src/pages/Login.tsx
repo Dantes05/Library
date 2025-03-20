@@ -12,17 +12,17 @@ const Login: React.FC = () => {
   const handleLogin = async () => {
     try {
       const response = await login(email, password);
-      console.log("📌 Ответ API:", response);
+      console.log("Ответ API:", response);
   
       if (!response.token) {
-        throw new Error("❌ Токен не получен. Проверь API!");
+        throw new Error("Токен не получен. Проверь API!");
       }
   
       localStorage.setItem("token", response.token);
       navigate("/books");
     } catch (error: any) {
       setError("Ошибка авторизации");
-      console.error("🛑 Ошибка авторизации:", error);
+      console.error("Ошибка авторизации:", error);
     }
   };
   

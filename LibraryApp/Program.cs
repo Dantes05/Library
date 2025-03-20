@@ -10,6 +10,8 @@ using System.Text;
 using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Builder;
 using LibraryApp.JwtFeatures;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.AspNetCore.Http.Features;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +77,7 @@ builder.Services.AddAuthentication(opt =>
 builder.Services.AddAuthorization(options =>
     {
         options.AddPolicy("OnlyAdminUsers", policy => policy.RequireRole("Admin"));
+        options.AddPolicy("AuthenticatedUsers", policy => policy.RequireAuthenticatedUser());
     }
 );
 
@@ -97,7 +100,10 @@ builder.Services.AddCors(options =>
         });
 });
 
-
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 5 * 1024 * 1024; 
+});
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
@@ -106,7 +112,17 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseHttpsRedirection();
-
+var imagesPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
+if (!Directory.Exists(imagesPath))
+{
+    Directory.CreateDirectory(imagesPath);
+}
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images")),
+    RequestPath = "/images"
+});
 app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();

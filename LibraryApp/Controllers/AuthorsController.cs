@@ -20,7 +20,7 @@ namespace LibraryApp.Controllers
             _bookRepository = bookRepository;
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet]
         public async Task<IActionResult> GetAllAuthors()
         {
@@ -28,7 +28,7 @@ namespace LibraryApp.Controllers
             return Ok(authors);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAuthorById(int id)
         {
@@ -37,7 +37,7 @@ namespace LibraryApp.Controllers
             return Ok(author);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet("{id}/books")]
         public async Task<IActionResult> GetBooksByAuthor(int id)
         {
@@ -45,7 +45,7 @@ namespace LibraryApp.Controllers
             return Ok(books);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPost]
         public async Task<IActionResult> CreateAuthor([FromBody] Author author)
         {
@@ -53,7 +53,7 @@ namespace LibraryApp.Controllers
             return CreatedAtAction(nameof(GetAuthorById), new { id = author.Id }, author);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAuthor(int id, [FromBody] Author author)
         {
@@ -62,7 +62,7 @@ namespace LibraryApp.Controllers
             return NoContent();
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "OnlyAdminUsers")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {

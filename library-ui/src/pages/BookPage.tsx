@@ -1,17 +1,18 @@
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; 
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const BookPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   const [book, setBook] = useState<any>(null);
+  const [author, setAuthor] = useState<any>(null); 
   const [isAvailable, setIsAvailable] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false); 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [returnDate, setReturnDate] = useState("");
   const [isBookRentedByUser, setIsBookRentedByUser] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); 
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     fetchBook();
@@ -20,16 +21,14 @@ const BookPage: React.FC = () => {
     checkAdmin();
   }, [id]);
 
-
   const checkAdmin = () => {
     const token = localStorage.getItem("token");
     if (!token) return;
-  
+
     try {
       const base64Url = token.split(".")[1];
       const decodedPayload = JSON.parse(atob(base64Url.replace(/-/g, "+").replace(/_/g, "/")));
-      console.log("Декодированный токен:", decodedPayload); 
-  
+      console.log("Декодированный токен:", decodedPayload);
 
       const role = decodedPayload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
       setIsAdmin(role === "Admin");
@@ -41,7 +40,15 @@ const BookPage: React.FC = () => {
   const fetchBook = async () => {
     try {
       const response = await axios.get(`http://localhost:7143/api/books/${id}`);
+      console.log("Данные книги:", response.data); 
       setBook(response.data);
+
+
+      if (response.data.authorId) {
+        const authorResponse = await axios.get(`http://localhost:7143/api/authors/${response.data.authorId}`);
+        console.log("Данные автора:", authorResponse.data); 
+        setAuthor(authorResponse.data);
+      }
     } catch (error) {
       console.error("Ошибка при загрузке книги:", error);
     }
@@ -61,18 +68,18 @@ const BookPage: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-  
+
       const base64Url = token.split(".")[1];
       const decodedPayload = JSON.parse(atob(base64Url.replace(/-/g, "+").replace(/_/g, "/")));
-  
-      console.log("📌 Декодированный токен:", decodedPayload);
-  
+
+      console.log("Декодированный токен:", decodedPayload);
+
       const response = await axios.get(`http://localhost:7143/api/books/${id}/is-rented`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-  
-      console.log("📌 Ответ API (книга арендована?):", response.data);
-  
+
+      console.log("Ответ API (книга арендована?):", response.data);
+
       setIsBookRentedByUser(response.data.isRented);
     } catch (error) {
       console.error("Ошибка при проверке, взял ли пользователь книгу:", error);
@@ -111,12 +118,12 @@ const BookPage: React.FC = () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        console.error("❌ Токен отсутствует.");
+        console.error("Токен отсутствует.");
         return;
       }
-  
-      console.log("📌 Отправляем запрос на возврат книги:", id);
-  
+
+      console.log("запрос на возврат книги:", id);
+
       const response = await axios.post(
         `http://localhost:7143/api/books/return/${id}`,
         {},
@@ -124,12 +131,12 @@ const BookPage: React.FC = () => {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-  
-      console.log("✅ Книга успешно возвращена:", response.data);
+
+      console.log("Книга успешно возвращена:", response.data);
       setIsAvailable(true);
       setIsBookRentedByUser(false);
     } catch (error: any) {
-      console.error("🛑 Ошибка при возврате книги:", error.response?.data || error.message);
+      console.error("Ошибка при возврате книги:", error.response?.data || error.message);
     }
   };
 
@@ -142,22 +149,36 @@ const BookPage: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log("✅ Книга успешно удалена");
+      console.log("Книга успешно удалена");
       navigate("/books");
     } catch (error) {
-      console.error("🛑 Ошибка при удалении книги:", error);
+      console.error("Ошибка при удалении книги:", error);
     }
   };
 
   if (!book) return <p>Загрузка...</p>;
 
+
+  const authorName = author ? `${author.firstName} ${author.lastName}` : "Автор неизвестен";
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold">{book.title}</h1>
+
+      {book.imagePath ? (
+        <img
+          src={`http://localhost:7143${book.imagePath}`}
+          alt={book.title}
+          className="w-64 h-80 object-cover rounded-lg shadow-lg my-4"
+        />
+      ) : (
+        <p className="text-gray-500">Нет изображения</p>
+      )}
+
       <p><strong>ISBN:</strong> {book.isbn}</p>
       <p><strong>Жанр:</strong> {book.genre}</p>
       <p><strong>Описание:</strong> {book.description}</p>
-      <p><strong>Автор:</strong> {book.authorName}</p>
+      <p><strong>Автор:</strong> {authorName}</p>
       <p>
         <strong>Статус:</strong>{" "}
         <span className={isAvailable ? "text-green-500" : "text-red-500"}>
@@ -177,7 +198,6 @@ const BookPage: React.FC = () => {
         <p className="text-red-500 font-bold">❌ Нет в наличии</p>
       )}
 
-
       {isAdmin && (
         <div className="mt-4 flex gap-4">
           <button className="bg-yellow-500 text-white px-4 py-2" onClick={() => navigate(`/edit-book/${id}`)}>
@@ -192,7 +212,6 @@ const BookPage: React.FC = () => {
           </button>
         </div>
       )}
-
 
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">

@@ -27,7 +27,7 @@ namespace LibraryApp.Controllers
             _context = context;
         }
 
-        [HttpGet]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet]
         public async Task<IActionResult> GetAllBooks([FromQuery] string? search, [FromQuery] string? genre, [FromQuery] string? author)
         {
@@ -85,6 +85,50 @@ namespace LibraryApp.Controllers
             return Ok(result);
         }
 
+
+
+        [Authorize(Policy = "OnlyAdminUsers")]
+        [HttpPost("{id}/upload-image")]
+        public async Task<IActionResult> UploadImage(int id, IFormFile file)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest("Файл не предоставлен.");
+                }
+
+                var book = await _bookRepository.GetByIdAsync(id);
+                if (book == null)
+                {
+                    return NotFound("Книга не найдена.");
+                }
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                var filePath = Path.Combine("wwwroot/images", fileName);
+
+                Console.WriteLine($"Начинаем сохранение изображения: {filePath}");
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                book.ImagePath = $"/images/{fileName}";
+                await _bookRepository.UpdateAsync(book);
+
+                Console.WriteLine($"Изображение сохранено: {book.ImagePath}");
+
+                return Ok(new { ImagePath = book.ImagePath });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при загрузке изображения: {ex.Message}");
+                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
+            }
+        }
+
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetBookById(int id)
         {
@@ -93,41 +137,115 @@ namespace LibraryApp.Controllers
             return Ok(book);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPost]
-        public async Task<IActionResult> CreateBook([FromBody] Book book)
+        public async Task<IActionResult> CreateBook([FromForm] BookCreateDto bookDto)
         {
-            if (book == null)
+            try
             {
-                return BadRequest("Invalid book data.");
-            }
+                if (bookDto == null)
+                {
+                    return BadRequest("Invalid book data.");
+                }
 
-            if (book.AuthorId == 0)
+                if (bookDto.AuthorId == 0)
+                {
+                    return BadRequest("AuthorId is required.");
+                }
+
+                var existingAuthor = await _authorRepository.GetByIdAsync(bookDto.AuthorId);
+                if (existingAuthor == null)
+                {
+                    return BadRequest("Author not found.");
+                }
+
+                var book = new Book
+                {
+                    ISBN = bookDto.ISBN,
+                    Title = bookDto.Title,
+                    Genre = bookDto.Genre,
+                    Description = bookDto.Description,
+                    AuthorId = bookDto.AuthorId
+                };
+
+                if (bookDto.Image != null)
+                {
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(bookDto.Image.FileName);
+                    var filePath = Path.Combine("wwwroot/images", fileName);
+
+                    Console.WriteLine($"📌 Начинаем сохранение изображения: {filePath}");
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await bookDto.Image.CopyToAsync(stream);
+                    }
+
+                    book.ImagePath = $"/images/{fileName}";
+                }
+
+                await _bookRepository.AddAsync(book);
+
+                Console.WriteLine($"Книга добавлена: {book.Title}");
+
+                return CreatedAtAction(nameof(GetBookById), new { id = book.Id }, book);
+            }
+            catch (Exception ex)
             {
-                return BadRequest("AuthorId is required.");
+                Console.WriteLine($"Ошибка при добавлении книги: {ex.Message}");
+                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
             }
-
-            var existingAuthor = await _authorRepository.GetByIdAsync(book.AuthorId);
-            if (existingAuthor == null)
-            {
-                return BadRequest("Author not found. Please provide a valid authorId.");
-            }
-
-            await _bookRepository.AddAsync(book);
-
-            return CreatedAtAction(nameof(GetBookById), new { id = book.Id }, book);
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateBook(int id, [FromBody] Book book)
+        public async Task<IActionResult> UpdateBook(int id, [FromForm] BookUpdateDto bookDto)
         {
-            if (id != book.Id) return BadRequest();
+            if (id != bookDto.Id)
+            {
+                return BadRequest();
+            }
+
+            var book = await _bookRepository.GetByIdAsync(id);
+            if (book == null)
+            {
+                return NotFound();
+            }
+
+            book.ISBN = bookDto.ISBN;
+            book.Title = bookDto.Title;
+            book.Genre = bookDto.Genre;
+            book.Description = bookDto.Description;
+            book.AuthorId = bookDto.AuthorId;
+
+            if (bookDto.Image != null)
+            {
+                if (!string.IsNullOrEmpty(book.ImagePath))
+                {
+                    var oldFilePath = Path.Combine("wwwroot", book.ImagePath.TrimStart('/'));
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        System.IO.File.Delete(oldFilePath);
+                    }
+                }
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(bookDto.Image.FileName);
+                var filePath = Path.Combine("wwwroot/images", fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await bookDto.Image.CopyToAsync(stream);
+                }
+
+                book.ImagePath = $"/images/{fileName}";
+            }
+
             await _bookRepository.UpdateAsync(book);
+
             return NoContent();
         }
 
-        [AllowAnonymous]
+
+        [Authorize(Policy = "OnlyAdminUsers")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBook(int id)
         {
@@ -137,7 +255,7 @@ namespace LibraryApp.Controllers
             return NoContent();
         }
 
-        [AllowAnonymous]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet("{bookId}/rentals")]
         public async Task<IActionResult> GetRentalsByBookId(int bookId)
         {
@@ -145,7 +263,7 @@ namespace LibraryApp.Controllers
             return Ok(rentals);
         }
 
-        [Authorize]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpPost("borrow")]
         public async Task<IActionResult> BorrowBook([FromBody] BookBorrowRequest request)
         {
@@ -180,7 +298,7 @@ namespace LibraryApp.Controllers
             return Ok("Книга успешно взята.");
         }
 
-        [Authorize]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpPost("return/{bookId}")]
         public async Task<IActionResult> ReturnBook(int bookId)
         {
@@ -191,13 +309,13 @@ namespace LibraryApp.Controllers
                 return Unauthorized("Пользователь не авторизован.");
             }
 
-            Console.WriteLine($"📌 Проверяем аренду: bookId={bookId}, userId={userId}");
+            Console.WriteLine($"Проверяем аренду: bookId={bookId}, userId={userId}");
 
             var rental = await _bookRentalRepository.GetActiveRental(bookId, userId);
 
             if (rental == null)
             {
-                Console.WriteLine($"❌ Аренда не найдена: bookId={bookId}, userId={userId}");
+                Console.WriteLine($"Аренда не найдена: bookId={bookId}, userId={userId}");
                 return NotFound("Аренда не найдена.");
             }
 
@@ -215,7 +333,7 @@ namespace LibraryApp.Controllers
 
             return Ok("Книга успешно возвращена.");
         }
-        [Authorize]
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet("user/rentals")]
         public async Task<IActionResult> GetUserRentals()
         {
@@ -253,8 +371,75 @@ namespace LibraryApp.Controllers
 
             return Ok(books);
         }
+        [Authorize(Policy = "AuthenticatedUsers")]
+        [HttpGet("user/rentals/notifications")]
+        public async Task<IActionResult> GetUserNotifications()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-        [Authorize]
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Пользователь не авторизован.");
+            }
+
+            var notifications = new List<object>();
+            var currentDate = DateTime.UtcNow;
+
+            var rentals = await _context.BookRentals
+                .Where(r => r.UserId == userId)
+                .Select(r => new
+                {
+                    r.BookId,
+                    r.ReturnedAt
+                })
+                .ToListAsync();
+
+            if (!rentals.Any())
+            {
+                return Ok(new { Message = "Нет активных аренд.", Type = "info" });
+            }
+
+            var bookIds = rentals.Select(r => r.BookId).Distinct().ToList();
+            var books = await _context.Books
+                .Where(b => bookIds.Contains(b.Id))
+                .ToDictionaryAsync(b => b.Id, b => b.Title); 
+
+            foreach (var rental in rentals)
+            {
+                if (!rental.ReturnedAt.HasValue) continue;
+
+                var returnDate = rental.ReturnedAt.Value;
+                books.TryGetValue(rental.BookId, out var bookTitle); 
+
+                if (bookTitle == null)
+                {
+                    Console.WriteLine($"Ошибка: Книга с ID {rental.BookId} не найдена!");
+                    continue;
+                }
+
+                if (returnDate < currentDate)
+                {
+                    notifications.Add(new
+                    {
+                        Message = $"Срок сдачи книги \"{bookTitle}\" ПРОСРОЧЕН!",
+                        Type = "error"
+                    });
+                }
+                else if ((returnDate - currentDate).TotalHours <= 24)
+                {
+                    notifications.Add(new
+                    {
+                        Message = $"Срок сдачи книги \"{bookTitle}\" истекает завтра!",
+                        Type = "warning"
+                    });
+                }
+            }
+
+            return Ok(notifications);
+        }
+
+
+        [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet("{bookId}/is-rented")]
         public async Task<IActionResult> IsBookRentedByUser(int bookId)
         {

@@ -1,16 +1,21 @@
 FROM node:18 AS build
 WORKDIR /app
 
-COPY package*.json ./
+
+COPY library-ui/package*.json ./
+
 
 RUN npm install
 
-COPY . .
+
+COPY library-ui/ .
+
 
 RUN npm run build
 
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
+
 
 COPY --from=build /app/build .
 

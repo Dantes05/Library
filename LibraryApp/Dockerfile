@@ -1,12 +1,15 @@
-
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
 COPY *.sln .
-COPY LibraryApp/*.csproj ./LibraryApp/
-COPY Application/*.csproj ./Application/
-COPY Domain/*.csproj ./Domain/
-COPY Infrastructure/*.csproj ./Infrastructure/
+
+COPY LibraryApp/LibraryApp.csproj ./LibraryApp/
+COPY Application/Application.csproj ./Application/
+COPY Domain/Domain.csproj ./Domain/
+COPY Infrastructure/Infrastructure.csproj ./Infrastructure/
+COPY LibraryTests/LibraryTests.csproj ./LibraryTests/
+
+
 RUN dotnet restore
 
 COPY . .

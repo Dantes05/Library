@@ -75,10 +75,10 @@ builder.Services.AddAuthentication(opt =>
 });
 
 builder.Services.AddAuthorization(options =>
-    {
-        options.AddPolicy("OnlyAdminUsers", policy => policy.RequireRole("Admin"));
-        options.AddPolicy("AuthenticatedUsers", policy => policy.RequireAuthenticatedUser());
-    }
+{
+    options.AddPolicy("OnlyAdminUsers", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("AuthenticatedUsers", policy => policy.RequireAuthenticatedUser());
+}
 );
 
 builder.Services.AddSingleton<JwtHandler>();
@@ -102,30 +102,43 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 5 * 1024 * 1024; 
+    options.MultipartBodyLengthLimit = 5 * 1024 * 1024;
 });
 
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseHttpsRedirection();
+
 var imagesPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
 if (!Directory.Exists(imagesPath))
 {
     Directory.CreateDirectory(imagesPath);
 }
+
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
         Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images")),
     RequestPath = "/images"
 });
+
 app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
+
+
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var context = services.GetRequiredService<ApplicationDbContext>();
+    context.Database.Migrate(); 
+}
 
 app.MapControllers();
 

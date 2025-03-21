@@ -1,7 +1,6 @@
 ﻿using Domain.Entities;
 using Infrastructure.Persistence;
 using Infrastructure.Repositories;
-using Application.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +11,8 @@ using Microsoft.AspNetCore.Builder;
 using LibraryApp.JwtFeatures;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http.Features;
+using Domain.Interfaces;
+using Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,9 +86,14 @@ builder.Services.AddSingleton<JwtHandler>();
 
 builder.Services.AddControllers();
 
+
+
 builder.Services.AddScoped<IAuthorRepository, AuthorRepository>();
 builder.Services.AddScoped<IBookRepository, BookRepository>();
 builder.Services.AddScoped<IBookRentalRepository, BookRentalRepository>();
+builder.Services.AddScoped<BookService>();
+builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<AuthorService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
@@ -137,7 +143,6 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<ApplicationDbContext>();
-    context.Database.Migrate(); 
 }
 
 app.MapControllers();

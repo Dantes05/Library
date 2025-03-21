@@ -115,6 +115,9 @@ const AddBook: React.FC = () => {
         onChange={(e) => {
           if (e.target.files && e.target.files[0]) {
             setImage(e.target.files[0]);
+          } else {
+            console.log("Файл не выбран или окно закрыто.");
+            setImage(null); // Сбросьте состояние, если файл не выбран
           }
         }}
       />

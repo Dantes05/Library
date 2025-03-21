@@ -205,6 +205,26 @@ namespace Infrastructure.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "740bc7d9-dd55-4ac0-83f3-709d820968e7",
+                            AccessFailedCount = 0,
+                            ConcurrencyStamp = "5d36667c-15ac-406e-8b8c-23017baf9ec2",
+                            Email = "admin@gmail.com",
+                            EmailConfirmed = true,
+                            FirstName = "Админчик",
+                            LastName = "1",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "ADMIN@GMAIL.COM",
+                            NormalizedUserName = "ADMIN@GMAIL.COM",
+                            PasswordHash = "AQAAAAIAAYagAAAAEKqKCWvpZQxFnCv2tlYyunNV2kdoqQwqNBlyVgn+AuSDm2GxRBCeJv7PdyNwvdwuPg==",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "fixed-security-stamp",
+                            TwoFactorEnabled = false,
+                            UserName = "admin@gmail.com"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

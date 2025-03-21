@@ -1,8 +1,9 @@
-﻿using Application.Interfaces;
-using Domain.Entities;
-using Infrastructure.Repositories;
+﻿using Application.DTOs;
+using Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace LibraryApp.Controllers
 {
@@ -11,20 +12,18 @@ namespace LibraryApp.Controllers
     [ApiController]
     public class AuthorsController : ControllerBase
     {
-        private readonly IAuthorRepository _authorRepository;
-        private readonly IBookRepository _bookRepository;
+        private readonly AuthorService _authorService;
 
-        public AuthorsController(IAuthorRepository authorRepository, IBookRepository bookRepository)
+        public AuthorsController(AuthorService authorService)
         {
-            _authorRepository = authorRepository;
-            _bookRepository = bookRepository;
+            _authorService = authorService;
         }
 
         [Authorize(Policy = "AuthenticatedUsers")]
         [HttpGet]
         public async Task<IActionResult> GetAllAuthors()
         {
-            var authors = await _authorRepository.GetAllAsync();
+            var authors = await _authorService.GetAllAuthorsAsync();
             return Ok(authors);
         }
 
@@ -32,7 +31,7 @@ namespace LibraryApp.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetAuthorById(int id)
         {
-            var author = await _authorRepository.GetByIdAsync(id);
+            var author = await _authorService.GetAuthorByIdAsync(id);
             if (author == null) return NotFound();
             return Ok(author);
         }
@@ -41,24 +40,24 @@ namespace LibraryApp.Controllers
         [HttpGet("{id}/books")]
         public async Task<IActionResult> GetBooksByAuthor(int id)
         {
-            var books = await _bookRepository.GetBooksByAuthorIdAsync(id);
+            var books = await _authorService.GetBooksByAuthorIdAsync(id);
             return Ok(books);
         }
 
         [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPost]
-        public async Task<IActionResult> CreateAuthor([FromBody] Author author)
+        public async Task<IActionResult> CreateAuthor([FromBody] CreateAuthorDto createAuthorDto)
         {
-            await _authorRepository.AddAsync(author);
-            return CreatedAtAction(nameof(GetAuthorById), new { id = author.Id }, author);
+            var createdAuthor = await _authorService.CreateAuthorAsync(createAuthorDto);
+            return CreatedAtAction(nameof(GetAuthorById), new { id = createdAuthor.Id }, createdAuthor);
         }
 
         [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateAuthor(int id, [FromBody] Author author)
+        public async Task<IActionResult> UpdateAuthor(int id, [FromBody] AuthorDto authorDto)
         {
-            if (id != author.Id) return BadRequest();
-            await _authorRepository.UpdateAsync(author);
+            if (id != authorDto.Id) return BadRequest();
+            await _authorService.UpdateAuthorAsync(id, authorDto);
             return NoContent();
         }
 
@@ -66,9 +65,7 @@ namespace LibraryApp.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAuthor(int id)
         {
-            var author = await _authorRepository.GetByIdAsync(id);
-            if (author == null) return NotFound();
-            await _authorRepository.DeleteAsync(author);
+            await _authorService.DeleteAuthorAsync(id);
             return NoContent();
         }
     }

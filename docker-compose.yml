@@ -9,39 +9,36 @@ services:
     ports:
       - "1433:1433"
     volumes:
-      - mssql_data:/var/opt/mssql
+      - mssql_data:/var/opt/mssql 
     healthcheck:
       test: ["CMD", "/opt/mssql-tools/bin/sqlcmd", "-U", "sa", "-P", "YourStrong!Passw0rd", "-Q", "SELECT 1"]
       interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 30  
 
   backend:
     build:
       context: .
       dockerfile: LibraryApp/Dockerfile
     ports:
-      - "5000:80"
+      - "8080:80" 
     depends_on:
       db:
-        condition: service_healthy
+        condition: service_healthy  
     environment:
       ConnectionStrings__DefaultConnection: "Server=db;Database=LibraryDB111;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      ASPNETCORE_ENVIRONMENT: "Production"  
+      ASPNETCORE_URLS: "http://+:80" 
 
   frontend:
     build:
       context: .
       dockerfile: library-ui/Dockerfile
     ports:
-      - "3000:80"
+      - "3000:80"  
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_healthy  
 
 volumes:
   mssql_data:

@@ -20,9 +20,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
 COPY --from=build /app .
-COPY wait-for-db.sh /wait-for-db.sh
-RUN chmod +x /wait-for-db.sh
+
 
 EXPOSE 80
 
-ENTRYPOINT ["/wait-for-db.sh", "dotnet", "LibraryApp.dll"]
+ENTRYPOINT ["dotnet", "LibraryApp.dll"]

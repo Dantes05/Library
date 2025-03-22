@@ -31,7 +31,7 @@ const BooksList: React.FC = () => {
 
   const fetchBooks = async () => {
     try {
-      const response = await axios.get("http://localhost:7143/api/books", {
+      const response = await axios.get("http://localhost:8080/api/books", {
         params: { search, genre, author }
       });
   
@@ -45,7 +45,7 @@ const BooksList: React.FC = () => {
       const booksWithAvailability = await Promise.all(
         data.map(async (book: any) => {
           try {
-            const rentalsResponse = await axios.get(`http://localhost:7143/api/books/${book.id}/rentals`);
+            const rentalsResponse = await axios.get(`http://localhost:8080/api/books/${book.id}/rentals`);
             const isAvailable = rentalsResponse.data.length === 0;
             return { ...book, isAvailable };
           } catch (error) {
@@ -77,7 +77,7 @@ const BooksList: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await axios.get("http://localhost:7143/api/books/user/rentals/notifications", {
+      const response = await axios.get("http://localhost:8080/api/books/user/rentals/notifications", {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -143,6 +143,7 @@ const BooksList: React.FC = () => {
       <div className="flex gap-2 mb-4">
         <input
           type="text"
+
           placeholder="Поиск по названию..."
           className="border p-2"
           value={search}

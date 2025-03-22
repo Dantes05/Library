@@ -29,8 +29,8 @@ const ProfilePage: React.FC = () => {
         return;
       }
 
-      // Запрашиваем книги, взятые пользователем
-      const response = await axios.get("http://localhost:7143/api/books/user/rentals", {
+
+      const response = await axios.get("http://localhost:8080/api/books/user/rentals", {
         headers: { Authorization: `Bearer ${token}` },
       });
 

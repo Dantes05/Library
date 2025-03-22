@@ -39,13 +39,13 @@ const BookPage: React.FC = () => {
 
   const fetchBook = async () => {
     try {
-      const response = await axios.get(`http://localhost:7143/api/books/${id}`);
+      const response = await axios.get(`http://localhost:8080/api/books/${id}`);
       console.log("Данные книги:", response.data); 
       setBook(response.data);
 
 
       if (response.data.authorId) {
-        const authorResponse = await axios.get(`http://localhost:7143/api/authors/${response.data.authorId}`);
+        const authorResponse = await axios.get(`http://localhost:8080/api/authors/${response.data.authorId}`);
         console.log("Данные автора:", authorResponse.data); 
         setAuthor(authorResponse.data);
       }
@@ -56,7 +56,7 @@ const BookPage: React.FC = () => {
 
   const checkAvailability = async () => {
     try {
-      const response = await axios.get(`http://localhost:7143/api/books/${id}/rentals`);
+      const response = await axios.get(`http://localhost:8080/api/books/${id}/rentals`);
       setIsAvailable(response.data.length === 0);
     } catch (error) {
       console.error("Ошибка при проверке наличия книги:", error);
@@ -74,7 +74,7 @@ const BookPage: React.FC = () => {
 
       console.log("Декодированный токен:", decodedPayload);
 
-      const response = await axios.get(`http://localhost:7143/api/books/${id}/is-rented`, {
+      const response = await axios.get(`http://localhost:8080/api/books/${id}/is-rented`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -95,7 +95,7 @@ const BookPage: React.FC = () => {
       }
 
       const response = await axios.post(
-        "http://localhost:7143/api/books/borrow",
+        "http://localhost:8080/api/books/borrow",
         {
           bookId: id,
           returnAt: returnDate,
@@ -125,7 +125,7 @@ const BookPage: React.FC = () => {
       console.log("запрос на возврат книги:", id);
 
       const response = await axios.post(
-        `http://localhost:7143/api/books/return/${id}`,
+        `http://localhost:8080/api/books/return/${id}`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -145,7 +145,7 @@ const BookPage: React.FC = () => {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      await axios.delete(`http://localhost:7143/api/books/${id}`, {
+      await axios.delete(`http://localhost:8080/api/books/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -167,7 +167,7 @@ const BookPage: React.FC = () => {
 
       {book.imagePath ? (
         <img
-          src={`http://localhost:7143${book.imagePath}`}
+          src={`http://localhost:8080${book.imagePath}`}
           alt={book.title}
           className="w-64 h-80 object-cover rounded-lg shadow-lg my-4"
         />

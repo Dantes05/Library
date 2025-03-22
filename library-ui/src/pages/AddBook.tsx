@@ -28,7 +28,7 @@ const AddBook: React.FC = () => {
 
   const fetchAuthors = async () => {
     try {
-      const response = await axios.get("http://localhost:7143/api/authors");
+      const response = await axios.get("http://localhost:8080/api/authors");
       setAuthors(response.data);
     } catch (error) {
       console.error("Ошибка при загрузке авторов:", error);
@@ -44,7 +44,7 @@ const AddBook: React.FC = () => {
     }
 
     try {
-      const response = await axios.post("http://localhost:7143/api/authors", newAuthor);
+      const response = await axios.post("http://localhost:8080/api/authors", newAuthor);
       const addedAuthor = response.data;
 
       setAuthors([...authors, addedAuthor]);
@@ -83,7 +83,7 @@ const AddBook: React.FC = () => {
         formData.append("Image", image);
       }
 
-      const response = await axios.post("http://localhost:7143/api/books", formData, {
+      const response = await axios.post("http://localhost:8080/api/books", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
@@ -117,7 +117,7 @@ const AddBook: React.FC = () => {
             setImage(e.target.files[0]);
           } else {
             console.log("Файл не выбран или окно закрыто.");
-            setImage(null); // Сбросьте состояние, если файл не выбран
+            setImage(null); 
           }
         }}
       />

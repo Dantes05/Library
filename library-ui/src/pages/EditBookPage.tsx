@@ -31,7 +31,7 @@ const EditBook: React.FC = () => {
 
   const fetchBook = async () => {
     try {
-      const response = await axios.get(`http://localhost:7143/api/books/${id}`);
+      const response = await axios.get(`http://localhost:8080/api/books/${id}`);
       const book = response.data;
 
       setIsbn(book.isbn);
@@ -48,7 +48,7 @@ const EditBook: React.FC = () => {
 
   const fetchAuthors = async () => {
     try {
-      const response = await axios.get("http://localhost:7143/api/authors");
+      const response = await axios.get("http://localhost:8080/api/authors");
       setAuthors(response.data);
     } catch (error) {
       console.error("Ошибка при загрузке авторов:", error);
@@ -57,7 +57,7 @@ const EditBook: React.FC = () => {
 
   const handleAddAuthor = async () => {
     try {
-      const response = await axios.post("http://localhost:7143/api/authors", newAuthor);
+      const response = await axios.post("http://localhost:8080/api/authors", newAuthor);
       const addedAuthor = response.data;
 
       setAuthors([...authors, addedAuthor]);
@@ -104,7 +104,7 @@ const EditBook: React.FC = () => {
   
       console.log("📤 Данные для отправки:", formData);
   
-      const response = await axios.put(`http://localhost:7143/api/books/${numericId}`, formData, {
+      const response = await axios.put(`http://localhost:8080/api/books/${numericId}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
   

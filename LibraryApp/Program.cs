@@ -13,6 +13,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http.Features;
 using Domain.Interfaces;
 using Application.Services;
+using LibraryApp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -146,7 +147,7 @@ using (var scope = app.Services.CreateScope())
     context.Database.Migrate();
 
 }
-
+app.UseMiddleware<Middleware>();
 app.MapControllers();
 
 app.Run();

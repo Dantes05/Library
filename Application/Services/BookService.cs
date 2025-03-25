@@ -50,14 +50,11 @@ public class BookService
         if (!string.IsNullOrWhiteSpace(author))
         {
             var authorEntity = await _authorRepository.GetByNameAsync(author);
-            if (authorEntity != null)
+            if (authorEntity == null)
             {
-                booksQuery = booksQuery.Where(b => b.AuthorId == authorEntity.Id);
+                return Enumerable.Empty<BookDto>();
             }
-            else
-            {
-                return new List<BookDto>();
-            }
+            booksQuery = booksQuery.Where(b => b.AuthorId == authorEntity.Id);
         }
 
         var booksWithAuthor = await booksQuery
@@ -65,7 +62,7 @@ public class BookService
                 _context.Authors,
                 book => book.AuthorId,
                 author => author.Id,
-                (book, author) => new 
+                (book, author) => new
                 {
                     Book = book,
                     AuthorName = $"{author.FirstName} {author.LastName}"
@@ -73,7 +70,7 @@ public class BookService
             )
             .ToListAsync();
 
-        var bookDtos = booksWithAuthor.Select(b => new BookDto
+        return booksWithAuthor.Select(b => new BookDto
         {
             Id = b.Book.Id,
             ISBN = b.Book.ISBN,
@@ -83,20 +80,36 @@ public class BookService
             AuthorId = b.Book.AuthorId,
             TakenAt = b.Book.TakenAt,
             ReturnAt = b.Book.ReturnAt,
-            AuthorName = b.AuthorName 
+            AuthorName = b.AuthorName
         });
+    }
 
-        return bookDtos;
+    public async Task<string> UploadImageAsync(int id, IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+        {
+            throw new ArgumentException("Файл не предоставлен.");
+        }
+
+        var book = await _bookRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Книга не найдена.");
+
+        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+        var filePath = Path.Combine("wwwroot/images", fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        book.ImagePath = $"/images/{fileName}";
+        await _bookRepository.UpdateAsync(book);
+
+        return book.ImagePath;
     }
 
     public async Task<BookDto> GetBookByIdAsync(int id)
     {
-        var book = await _bookRepository.GetByIdAsync(id);
-        if (book == null)
-        {
-            throw new KeyNotFoundException("Book not found");
-        }
-
+        var book = await _bookRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Book not found");
         var author = await _authorRepository.GetByIdAsync(book.AuthorId);
 
         return new BookDto
@@ -126,11 +139,8 @@ public class BookService
             throw new ArgumentException("AuthorId is required.");
         }
 
-        var existingAuthor = await _authorRepository.GetByIdAsync(bookDto.AuthorId);
-        if (existingAuthor == null)
-        {
+        var existingAuthor = await _authorRepository.GetByIdAsync(bookDto.AuthorId) ??
             throw new ArgumentException("Author not found.");
-        }
 
         var book = _mapper.Map<Book>(bookDto);
 
@@ -159,11 +169,7 @@ public class BookService
             throw new ArgumentException("ID mismatch");
         }
 
-        var book = await _bookRepository.GetByIdAsync(id);
-        if (book == null)
-        {
-            throw new KeyNotFoundException("Book not found");
-        }
+        var book = await _bookRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Book not found");
 
         _mapper.Map(bookDto, book);
 
@@ -194,12 +200,7 @@ public class BookService
 
     public async Task DeleteBookAsync(int id)
     {
-        var book = await _bookRepository.GetByIdAsync(id);
-        if (book == null)
-        {
-            throw new KeyNotFoundException("Book not found");
-        }
-
+        var book = await _bookRepository.GetByIdAsync(id) ?? throw new KeyNotFoundException("Book not found");
         await _bookRepository.DeleteAsync(book);
     }
 
@@ -209,40 +210,15 @@ public class BookService
         return _mapper.Map<IEnumerable<BookRentalDto>>(rentals);
     }
 
-    public async Task<string> UploadImageAsync(int id, IFormFile file)
-    {
-        if (file == null || file.Length == 0)
-        {
-            throw new ArgumentException("Файл не предоставлен.");
-        }
-
-        var book = await _bookRepository.GetByIdAsync(id);
-        if (book == null)
-        {
-            throw new KeyNotFoundException("Книга не найдена.");
-        }
-
-        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-        var filePath = Path.Combine("wwwroot/images", fileName);
-
-        using (var stream = new FileStream(filePath, FileMode.Create))
-        {
-            await file.CopyToAsync(stream);
-        }
-
-        book.ImagePath = $"/images/{fileName}";
-        await _bookRepository.UpdateAsync(book);
-
-        return book.ImagePath;
-    }
-
     public async Task BorrowBookAsync(string userId, BookBorrowRequest request)
     {
-        var book = await _bookRepository.GetByIdAsync(request.BookId);
-        if (book == null)
+        if (string.IsNullOrEmpty(userId))
         {
-            throw new KeyNotFoundException("Book not found");
+            throw new UnauthorizedAccessException("User ID is required");
         }
+
+        var book = await _bookRepository.GetByIdAsync(request.BookId) ??
+            throw new KeyNotFoundException("Book not found");
 
         var rental = new BookRental
         {
@@ -261,11 +237,13 @@ public class BookService
 
     public async Task ReturnBookAsync(string userId, int bookId)
     {
-        var rental = await _bookRentalRepository.GetActiveRental(bookId, userId);
-        if (rental == null)
+        if (string.IsNullOrEmpty(userId))
         {
-            throw new KeyNotFoundException("Rental not found");
+            throw new UnauthorizedAccessException("User ID is required");
         }
+
+        var rental = await _bookRentalRepository.GetActiveRental(bookId, userId) ??
+            throw new KeyNotFoundException("Rental not found");
 
         await _bookRentalRepository.DeleteRental(rental);
 
@@ -280,6 +258,11 @@ public class BookService
 
     public async Task<IEnumerable<BookRentalDto>> GetUserRentalsAsync(string userId)
     {
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new UnauthorizedAccessException("User ID is required");
+        }
+
         var rentals = await _bookRentalRepository.GetRentalsByUserId(userId);
 
         var rentalDtos = new List<BookRentalDto>();
@@ -307,6 +290,11 @@ public class BookService
 
     public async Task<IEnumerable<NotificationDto>> GetUserNotificationsAsync(string userId)
     {
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new UnauthorizedAccessException("User ID is required");
+        }
+
         var notifications = new List<NotificationDto>();
         var currentDate = DateTime.UtcNow;
 
@@ -334,12 +322,7 @@ public class BookService
             if (!rental.ReturnedAt.HasValue) continue;
 
             var returnDate = rental.ReturnedAt.Value;
-            books.TryGetValue(rental.BookId, out var bookTitle);
-
-            if (bookTitle == null)
-            {
-                continue;
-            }
+            if (!books.TryGetValue(rental.BookId, out var bookTitle)) continue;
 
             if (returnDate < currentDate)
             {
@@ -364,6 +347,11 @@ public class BookService
 
     public async Task<bool> IsBookRentedByUserAsync(int bookId, string userId)
     {
+        if (string.IsNullOrEmpty(userId))
+        {
+            throw new UnauthorizedAccessException("User ID is required");
+        }
+
         return await _bookRentalRepository.IsBookRentedByUser(bookId, userId);
     }
 }

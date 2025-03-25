@@ -21,37 +21,20 @@ namespace LibraryApp.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] UserForRegistrationDto userForRegistration)
         {
-            var result = await _authService.RegisterAsync(userForRegistration);
-            if (!result.IsSuccessfulRegistration)
-            {
-                return BadRequest(result);
-            }
-
-            return StatusCode(201);
+            await _authService.RegisterAsync(userForRegistration);
+            return Ok();
         }
 
         [HttpPost("authenticate")]
-        public async Task<IActionResult> Authenticate([FromBody] UserForAuthenticationDto userForAuthentication)
+        public async Task<ActionResult<AuthResponseDto>> Authenticate([FromBody] UserForAuthenticationDto userForAuthentication)
         {
-            var result = await _authService.AuthenticateAsync(userForAuthentication);
-            if (!result.IsAuthSuccessful)
-            {
-                return Unauthorized(result);
-            }
-
-            return Ok(result);
+            return await _authService.AuthenticateAsync(userForAuthentication);
         }
 
         [HttpPost("refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+        public async Task<ActionResult<AuthResponseDto>> Refresh([FromBody] RefreshTokenRequest request)
         {
-            var result = await _authService.RefreshTokenAsync(request);
-            if (!result.IsAuthSuccessful)
-            {
-                return Unauthorized(result);
-            }
-
-            return Ok(result);
+            return await _authService.RefreshTokenAsync(request);
         }
 
         [Authorize]
@@ -59,7 +42,7 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> Logout()
         {
             await _authService.LogoutAsync(User);
-            return Ok("Logged out successfully.");
+            return Ok();
         }
     }
 }

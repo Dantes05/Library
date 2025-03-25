@@ -1,10 +1,12 @@
-﻿using Application.DTOs;
+﻿// AuthorService.cs
+using Application.DTOs;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using Application.Extensions;
 
 namespace Application.Services
 {
@@ -14,7 +16,10 @@ namespace Application.Services
         private readonly IBookRepository _bookRepository;
         private readonly IMapper _mapper;
 
-        public AuthorService(IAuthorRepository authorRepository, IBookRepository bookRepository, IMapper mapper)
+        public AuthorService(
+            IAuthorRepository authorRepository,
+            IBookRepository bookRepository,
+            IMapper mapper)
         {
             _authorRepository = authorRepository;
             _bookRepository = bookRepository;
@@ -27,19 +32,40 @@ namespace Application.Services
             return _mapper.Map<IEnumerable<AuthorDto>>(authors);
         }
 
-        public async Task<AuthorDto?> GetAuthorByIdAsync(int id)
+        public async Task<AuthorDto> GetAuthorByIdAsync(int id)
         {
             var author = await _authorRepository.GetByIdAsync(id);
+            if (author == null)
+            {
+                throw new NotFoundException($"Author with ID {id} not found.");
+            }
             return _mapper.Map<AuthorDto>(author);
         }
 
         public async Task<IEnumerable<Book>> GetBooksByAuthorIdAsync(int authorId)
         {
-            return await _bookRepository.GetBooksByAuthorIdAsync(authorId);
+            var author = await _authorRepository.GetByIdAsync(authorId);
+            if (author == null)
+            {
+                throw new NotFoundException($"Author with ID {authorId} not found.");
+            }
+
+            var books = await _bookRepository.GetBooksByAuthorIdAsync(authorId);
+            if (books == null || !books.Any())
+            {
+                throw new NotFoundException($"No books found for author with ID {authorId}.");
+            }
+
+            return books;
         }
 
         public async Task<AuthorDto> CreateAuthorAsync(CreateAuthorDto createAuthorDto)
         {
+            if (createAuthorDto == null)
+            {
+                throw new ArgumentNullException(nameof(createAuthorDto));
+            }
+
             var author = _mapper.Map<Author>(createAuthorDto);
             await _authorRepository.AddAsync(author);
             return _mapper.Map<AuthorDto>(author);
@@ -47,13 +73,24 @@ namespace Application.Services
 
         public async Task UpdateAuthorAsync(int id, AuthorDto authorDto)
         {
-            if (id != authorDto.Id)
+            if (authorDto == null)
             {
-                throw new ArgumentException("ID mismatch.");
+                throw new ArgumentNullException(nameof(authorDto));
             }
 
-            var author = _mapper.Map<Author>(authorDto);
-            await _authorRepository.UpdateAsync(author);
+            if (id != authorDto.Id)
+            {
+                throw new ValidationException("ID in URL does not match the author's ID.");
+            }
+
+            var existingAuthor = await _authorRepository.GetByIdAsync(id);
+            if (existingAuthor == null)
+            {
+                throw new NotFoundException($"Author with ID {id} not found.");
+            }
+
+            _mapper.Map(authorDto, existingAuthor);
+            await _authorRepository.UpdateAsync(existingAuthor);
         }
 
         public async Task DeleteAuthorAsync(int id)
@@ -61,7 +98,7 @@ namespace Application.Services
             var author = await _authorRepository.GetByIdAsync(id);
             if (author == null)
             {
-                throw new KeyNotFoundException("Author not found.");
+                throw new NotFoundException($"Author with ID {id} not found.");
             }
 
             await _authorRepository.DeleteAsync(author);

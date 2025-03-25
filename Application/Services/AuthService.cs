@@ -1,5 +1,6 @@
 ﻿// Application/Services/AuthService.cs
 using Application.DTOs;
+using Application.Extensions;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Interfaces;
@@ -33,17 +34,16 @@ namespace Application.Services
         {
             if (userForRegistration == null)
             {
-                throw new ArgumentNullException(nameof(userForRegistration), "User data is required.");
+                throw new ValidationException("User data is required");
             }
 
             var user = _mapper.Map<User>(userForRegistration);
-
             var result = await _userManager.CreateAsync(user, userForRegistration.Password);
 
             if (!result.Succeeded)
             {
                 var errors = result.Errors.Select(e => e.Description);
-                return new RegistrationResponseDto { Errors = errors };
+                throw new ValidationException($"Registration failed: {string.Join(", ", errors)}");
             }
 
             await _userManager.AddToRoleAsync(user, "User");
@@ -55,7 +55,7 @@ namespace Application.Services
             var user = await _userManager.FindByEmailAsync(userForAuthentication.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, userForAuthentication.Password))
             {
-                return new AuthResponseDto { ErrorMessage = "Invalid Authentication" };
+                throw new UnauthorizedException("Invalid email or password");
             }
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -81,7 +81,7 @@ namespace Application.Services
 
             if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
-                return new AuthResponseDto { ErrorMessage = "Invalid or expired refresh token." };
+                throw new UnauthorizedException("Invalid or expired refresh token");
             }
 
             var roles = await _userManager.GetRolesAsync(user);
@@ -106,7 +106,7 @@ namespace Application.Services
             var user = await _userManager.GetUserAsync(userPrincipal);
             if (user == null)
             {
-                throw new UnauthorizedAccessException("User not found.");
+                throw new UnauthorizedException("User not found");
             }
 
             user.RefreshToken = null;

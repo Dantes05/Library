@@ -2,10 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using Domain.Entities;
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Http;
-using System;
 using Application.DTOs;
 
 namespace LibraryApp.Controllers
@@ -34,20 +30,8 @@ namespace LibraryApp.Controllers
         [HttpPost("{id}/upload-image")]
         public async Task<IActionResult> UploadImage(int id, IFormFile file)
         {
-            try
-            {
-                if (file == null || file.Length == 0)
-                {
-                    return BadRequest("Файл не предоставлен.");
-                }
-
-                var imagePath = await _bookService.UploadImageAsync(id, file);
-                return Ok(new { ImagePath = imagePath });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
+            var imagePath = await _bookService.UploadImageAsync(id, file);
+            return Ok(new { ImagePath = imagePath });
         }
 
         [Authorize(Policy = "AuthenticatedUsers")]
@@ -55,7 +39,6 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> GetBookById(int id)
         {
             var book = await _bookService.GetBookByIdAsync(id);
-            if (book == null) return NotFound();
             return Ok(book);
         }
 
@@ -63,45 +46,24 @@ namespace LibraryApp.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateBook([FromForm] BookCreateDto bookDto)
         {
-            try
-            {
-                var book = await _bookService.CreateBookAsync(bookDto);
-                return CreatedAtAction(nameof(GetBookById), new { id = book.Id }, book);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
+            var book = await _bookService.CreateBookAsync(bookDto);
+            return CreatedAtAction(nameof(GetBookById), new { id = book.Id }, book);
         }
 
         [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateBook(int id, [FromForm] BookUpdateDto bookDto)
         {
-            try
-            {
-                await _bookService.UpdateBookAsync(id, bookDto);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
+            await _bookService.UpdateBookAsync(id, bookDto);
+            return NoContent();
         }
 
         [Authorize(Policy = "OnlyAdminUsers")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteBook(int id)
         {
-            try
-            {
-                await _bookService.DeleteBookAsync(id);
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
+            await _bookService.DeleteBookAsync(id);
+            return NoContent();
         }
 
         [Authorize(Policy = "AuthenticatedUsers")]
@@ -117,21 +79,8 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> BorrowBook([FromBody] BookBorrowRequest request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("Пользователь не авторизован.");
-            }
-
-            try
-            {
-                await _bookService.BorrowBookAsync(userId, request);
-                return Ok("Книга успешно взята.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
+            await _bookService.BorrowBookAsync(userId, request);
+            return Ok("Книга успешно взята.");
         }
 
         [Authorize(Policy = "AuthenticatedUsers")]
@@ -139,21 +88,8 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> ReturnBook(int bookId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("Пользователь не авторизован.");
-            }
-
-            try
-            {
-                await _bookService.ReturnBookAsync(userId, bookId);
-                return Ok("Книга успешно возвращена.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Ошибка сервера: {ex.Message}");
-            }
+            await _bookService.ReturnBookAsync(userId, bookId);
+            return Ok("Книга успешно возвращена.");
         }
 
         [Authorize(Policy = "AuthenticatedUsers")]
@@ -161,12 +97,6 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> GetUserRentals()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("Пользователь не авторизован.");
-            }
-
             var rentals = await _bookService.GetUserRentalsAsync(userId);
             return Ok(rentals);
         }
@@ -176,12 +106,6 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> GetUserNotifications()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("Пользователь не авторизован.");
-            }
-
             var notifications = await _bookService.GetUserNotificationsAsync(userId);
             return Ok(notifications);
         }
@@ -191,12 +115,6 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> IsBookRentedByUser(int bookId)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (string.IsNullOrEmpty(userId))
-            {
-                return Unauthorized("Пользователь не авторизован.");
-            }
-
             var isRented = await _bookService.IsBookRentedByUserAsync(bookId, userId);
             return Ok(new { isRented });
         }

@@ -1,7 +1,10 @@
-﻿using Application.DTOs;
+﻿// AuthorsController.cs
+using Application.DTOs;
 using Application.Services;
+using Application.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -32,7 +35,6 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> GetAuthorById(int id)
         {
             var author = await _authorService.GetAuthorByIdAsync(id);
-            if (author == null) return NotFound();
             return Ok(author);
         }
 
@@ -49,14 +51,17 @@ namespace LibraryApp.Controllers
         public async Task<IActionResult> CreateAuthor([FromBody] CreateAuthorDto createAuthorDto)
         {
             var createdAuthor = await _authorService.CreateAuthorAsync(createAuthorDto);
-            return CreatedAtAction(nameof(GetAuthorById), new { id = createdAuthor.Id }, createdAuthor);
+            return CreatedAtAction(
+                nameof(GetAuthorById),
+                new { id = createdAuthor.Id },
+                createdAuthor
+            );
         }
 
         [Authorize(Policy = "OnlyAdminUsers")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateAuthor(int id, [FromBody] AuthorDto authorDto)
         {
-            if (id != authorDto.Id) return BadRequest();
             await _authorService.UpdateAuthorAsync(id, authorDto);
             return NoContent();
         }

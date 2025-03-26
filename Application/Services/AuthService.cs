@@ -1,5 +1,4 @@
-﻿// Application/Services/AuthService.cs
-using Application.DTOs;
+﻿using Application.DTOs;
 using Application.Extensions;
 using AutoMapper;
 using Domain.Entities;
@@ -12,6 +11,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Application.Services
 {
@@ -22,7 +23,8 @@ namespace Application.Services
         private readonly IConfiguration _config;
         private readonly IMapper _mapper;
 
-        public AuthService(IMapper mapper, UserManager<User> userManager, SignInManager<User> signInManager, IConfiguration config)
+        public AuthService(IMapper mapper, UserManager<User> userManager,
+            SignInManager<User> signInManager, IConfiguration config)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -30,7 +32,9 @@ namespace Application.Services
             _mapper = mapper;
         }
 
-        public async Task<RegistrationResponseDto> RegisterAsync(UserForRegistrationDto userForRegistration)
+        public async Task<RegistrationResponseDto> RegisterAsync(
+            UserForRegistrationDto userForRegistration,
+            CancellationToken cancellationToken = default)
         {
             if (userForRegistration == null)
             {
@@ -50,7 +54,9 @@ namespace Application.Services
             return new RegistrationResponseDto { IsSuccessfulRegistration = true };
         }
 
-        public async Task<AuthResponseDto> AuthenticateAsync(UserForAuthenticationDto userForAuthentication)
+        public async Task<AuthResponseDto> AuthenticateAsync(
+            UserForAuthenticationDto userForAuthentication,
+            CancellationToken cancellationToken = default)
         {
             var user = await _userManager.FindByEmailAsync(userForAuthentication.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, userForAuthentication.Password))
@@ -75,9 +81,12 @@ namespace Application.Services
             return authResponse;
         }
 
-        public async Task<AuthResponseDto> RefreshTokenAsync(RefreshTokenRequest request)
+        public async Task<AuthResponseDto> RefreshTokenAsync(
+            RefreshTokenRequest request,
+            CancellationToken cancellationToken = default)
         {
-            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken);
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken, cancellationToken);
 
             if (user == null || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
             {
@@ -95,7 +104,9 @@ namespace Application.Services
             };
         }
 
-        public async Task LogoutAsync(ClaimsPrincipal userPrincipal)
+        public async Task LogoutAsync(
+            ClaimsPrincipal userPrincipal,
+            CancellationToken cancellationToken = default)
         {
             var user = await _userManager.GetUserAsync(userPrincipal);
             if (user == null)

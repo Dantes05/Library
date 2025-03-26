@@ -2,10 +2,8 @@
 using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Infrastructure.Repositories
@@ -14,19 +12,28 @@ namespace Infrastructure.Repositories
     {
         public BookRepository(ApplicationDbContext context) : base(context) { }
 
-        public async Task<Book?> GetByISBNAsync(string isbn)
+        public async Task<Book?> GetByISBNAsync(
+            string isbn,
+            CancellationToken cancellationToken = default)
         {
             return await _context.Books
-                .FirstOrDefaultAsync(b => b.ISBN == isbn);
+                .FirstOrDefaultAsync(b => b.ISBN == isbn, cancellationToken);
         }
 
-        public async Task<IEnumerable<Book>> GetBooksByAuthorIdAsync(int authorId)
+        public async Task<IEnumerable<Book>> GetBooksByAuthorIdAsync(
+            int authorId,
+            CancellationToken cancellationToken = default)
         {
             return await _context.Books
                 .Where(b => b.AuthorId == authorId)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
-        public async Task<IEnumerable<Book>> GetFilteredBooksAsync(string? searchTerm, string? genre, int? authorId)
+
+        public async Task<IEnumerable<Book>> GetFilteredBooksAsync(
+            string? searchTerm,
+            string? genre,
+            int? authorId,
+            CancellationToken cancellationToken = default)
         {
             var query = _context.Books.AsQueryable();
 
@@ -45,8 +52,7 @@ namespace Infrastructure.Repositories
                 query = query.Where(b => b.AuthorId == authorId.Value);
             }
 
-            return await query.ToListAsync();
+            return await query.ToListAsync(cancellationToken);
         }
-
     }
 }

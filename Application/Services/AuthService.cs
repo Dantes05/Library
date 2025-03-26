@@ -86,18 +86,12 @@ namespace Application.Services
 
             var roles = await _userManager.GetRolesAsync(user);
             var newAccessToken = GenerateJwtToken(user, roles);
-            var newRefreshToken = GenerateRefreshToken();
-
-            user.RefreshToken = newRefreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-
-            await _userManager.UpdateAsync(user);
 
             return new AuthResponseDto
             {
                 IsAuthSuccessful = true,
                 Token = newAccessToken,
-                RefreshToken = newRefreshToken
+                RefreshToken = request.RefreshToken
             };
         }
 

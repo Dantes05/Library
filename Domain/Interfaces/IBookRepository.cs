@@ -11,6 +11,6 @@ namespace Domain.Interfaces
     {
         Task<Book?> GetByISBNAsync(string isbn);
         Task<IEnumerable<Book>> GetBooksByAuthorIdAsync(int authorId);
-        IQueryable<Book> GetAllQueryable();
+        Task<IEnumerable<Book>> GetFilteredBooksAsync(string? searchTerm, string? genre, int? authorId);
     }
 }

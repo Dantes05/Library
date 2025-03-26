@@ -35,18 +35,7 @@ public class BookService
 
     public async Task<IEnumerable<BookDto>> GetAllBooksAsync(string? search, string? genre, string? author)
     {
-        var booksQuery = _bookRepository.GetAllQueryable();
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            booksQuery = booksQuery.Where(b => b.Title.Contains(search));
-        }
-
-        if (!string.IsNullOrWhiteSpace(genre))
-        {
-            booksQuery = booksQuery.Where(b => b.Genre == genre);
-        }
-
+        int? authorId = null;
         if (!string.IsNullOrWhiteSpace(author))
         {
             var authorEntity = await _authorRepository.GetByNameAsync(author);
@@ -54,33 +43,27 @@ public class BookService
             {
                 return Enumerable.Empty<BookDto>();
             }
-            booksQuery = booksQuery.Where(b => b.AuthorId == authorEntity.Id);
+            authorId = authorEntity.Id;
         }
 
-        var booksWithAuthor = await booksQuery
-            .Join(
-                _context.Authors,
-                book => book.AuthorId,
-                author => author.Id,
-                (book, author) => new
-                {
-                    Book = book,
-                    AuthorName = $"{author.FirstName} {author.LastName}"
-                }
-            )
-            .ToListAsync();
+        var books = await _bookRepository.GetFilteredBooksAsync(search, genre, authorId);
+        var authorIds = books.Select(b => b.AuthorId).Distinct();
+        var authors = await _authorRepository.FindAsync(a => authorIds.Contains(a.Id));
 
-        return booksWithAuthor.Select(b => new BookDto
+        var authorDictionary = authors.ToDictionary(a => a.Id, a => $"{a.FirstName} {a.LastName}");
+
+        return books.Select(book => new BookDto
         {
-            Id = b.Book.Id,
-            ISBN = b.Book.ISBN,
-            Title = b.Book.Title,
-            Genre = b.Book.Genre,
-            Description = b.Book.Description,
-            AuthorId = b.Book.AuthorId,
-            TakenAt = b.Book.TakenAt,
-            ReturnAt = b.Book.ReturnAt,
-            AuthorName = b.AuthorName
+            Id = book.Id,
+            ISBN = book.ISBN,
+            Title = book.Title,
+            Genre = book.Genre,
+            Description = book.Description,
+            AuthorId = book.AuthorId,
+            TakenAt = book.TakenAt,
+            ReturnAt = book.ReturnAt,
+            AuthorName = authorDictionary.TryGetValue(book.AuthorId, out var name) ? name : "Unknown",
+            ImagePath = book.ImagePath
         });
     }
 

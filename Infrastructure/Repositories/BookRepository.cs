@@ -26,10 +26,27 @@ namespace Infrastructure.Repositories
                 .Where(b => b.AuthorId == authorId)
                 .ToListAsync();
         }
-        public IQueryable<Book> GetAllQueryable()
+        public async Task<IEnumerable<Book>> GetFilteredBooksAsync(string? searchTerm, string? genre, int? authorId)
         {
-            return _context.Books.AsQueryable();
-        }
-    }
+            var query = _context.Books.AsQueryable();
 
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(b => b.Title.Contains(searchTerm));
+            }
+
+            if (!string.IsNullOrWhiteSpace(genre))
+            {
+                query = query.Where(b => b.Genre == genre);
+            }
+
+            if (authorId.HasValue)
+            {
+                query = query.Where(b => b.AuthorId == authorId.Value);
+            }
+
+            return await query.ToListAsync();
+        }
+
+    }
 }
